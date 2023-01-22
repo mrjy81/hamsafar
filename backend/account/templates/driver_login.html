@@ -1,0 +1,31 @@
+{% extends '_base.html' %}
+{% load bootstrap5 %}
+
+{# Load CSS and JavaScript #}
+{% bootstrap_css %}
+{% bootstrap_javascript %}
+
+{# Display django.contrib.messages as Bootstrap alerts #}
+{% bootstrap_messages %}
+{% block content %}
+    <section class=" slider_section ">
+        <div class="container-fluid m-lg-5">
+            <div class="row">
+                <div class="col offset-md-1">
+                    <div class="contact_form">
+                        <div class="text-center">
+                            <h2>راننده گرامی</h2>
+                        </div>
+                        <form method="post">
+                            {% csrf_token %}
+                                {% bootstrap_form form %}
+                            <button type="submit" class="btn btn-block btn-primary">ورود</button>
+                            <a class="btn" href="{% url 'register-driver' %}">ثبت نام</a>
+                       
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock %}

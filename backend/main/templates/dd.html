@@ -1,0 +1,149 @@
+{% extends '_base.html' %}
+{% load bootstrap5 %}
+{% bootstrap_css %}
+{% bootstrap_javascript %}
+{% bootstrap_messages %}
+{% load leaflet_tags %}
+{% load jalali_tags %}
+{% load static %}
+
+{% block head %}
+    {% leaflet_js plugins="forms" %}
+    {% leaflet_css plugins="forms" %}
+{% endblock %}
+
+
+{% block links %}
+    <link rel="stylesheet" href="{% static 'admin/jquery.ui.datepicker.jalali/themes/base/jquery-ui.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="https://static.neshan.org/sdk/openlayers/5.3.0/ol.css">
+{% endblock links %}
+
+{% block styles %}
+{% endblock styles %}
+
+
+{% block content %}
+    <section class=" slider_section ">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-7 ">
+                    <div class="box">
+                        {{ form.media }}
+                        <input dir="ltr" type="hidden" placeholder="latitude" required id="center_lat">
+                        <input dir="ltr" type="hidden" placeholder="longitude" required id="center_lng">
+                        <div id="map"
+                             style="width: 80vw; height: 450px; background: #eee; border: 2px solid #aaa;"></div>
+                        <div id="org" class="text-center mb-lg-5">
+                            <button id="driver-btn-org" class="btn btn-block btn-primary">
+                                تایید مکان مبدا
+                            </button>
+                        </div>
+                        <div id="des" class="text-center mb-lg-5" style="display:none;">
+                            <button id="driver-btn-des" class="btn btn-block btn-primary">
+                                تایید مکان مقصد
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock content %}
+
+
+{% block scripts %}
+    <script src="{% static 'admin/js/django_jalali.min.js' %}"></script>
+    <script src="https://cdn.polyfill.io/v2/polyfill.min.js?features=requestAnimationFrame,Element.prototype.classList,URL"></script>
+    <script type="text/javascript" src="https://static.neshan.org/sdk/openlayers/5.3.0/ol.js"></script>
+    <script type="text/javascript">
+        var centerLat = document.getElementById("center_lat");
+        var centerLng = document.getElementById("center_lng");
+
+        //init the map
+        var myMap = new L.Map('map', {
+            key: 'web.8b9635f8452b441e9377697eb6c9f2bb',
+            maptype: 'dreamy',
+            poi: true,
+            traffic: true,
+            center: [35.699739, 51.338097],
+            zoom: 14
+        });
+        //adding the marker to map
+        var marker = L.marker([35.699739, 51.338097]).addTo(myMap);
+        centerLat.value = "35.699739";
+        centerLng.value = "51.338097";
+        //on map binding
+        myMap.addEventListener('click', addMarkerOnMap);
+
+        function addMarkerOnMap(e) {
+            marker.setLatLng(e.latlng);
+            marker.bindPopup(`lat : ${e.latlng.lat} - lon : ${e.latlng.lng}`).openPopup();
+            centerLat.value = e.latlng.lat;
+            centerLng.value = e.latlng.lng;
+        }
+
+        var requests = []
+
+        $("#driver-btn-org").on('click', function () {
+            let locations = {'lon': centerLng.value, 'lat': centerLat.value};
+            requests.push(locations);
+            console.log(locations);
+            $("#org").hide();
+            $("#des").show();
+
+        });
+
+        $(document).ready(function () {
+            $("#driver-btn-des").click(function () {
+                let locations = {'lon': centerLng.value, 'lat': centerLat.value};
+                console.log(locations);
+                requests.push(locations);
+                let org_lon = requests[0]["lon"];
+                let org_lat = requests[0]["lat"];
+                let des_lon = requests[1]['lon'];
+                let des_lat = requests[1]['lat'];
+                $.ajax({
+                    type: 'GET',
+                    url: `https://api.neshan.org/v1/distance-matrix?type=car&origins=${org_lat},${org_lon}&destinations=${des_lat},${des_lon}`,
+                    headers: {"Api-Key": "service.d5db9d57edf24d9c8fd2b4f5cd84f2b2"},
+                    success: function (response) {
+                        console.log(response);
+                        $.ajax({
+                            type: 'POST',
+                            url: "{% url 'driver-dashboard' %}",
+                            data: {
+                                csrfmiddlewaretoken: '{{ csrf_token }}',
+                                loc: JSON.stringify(requests),
+                                dis: JSON.stringify(response),
+                            },
+                            success: function (response) {
+                                if ('error' in response) {
+                                    $('.alert').show();
+                                    $('.alert').text(response['error']);
+                                    setTimeout(function () {
+                                        $('.alert').hide();
+                                    }, 2000);
+                                }
+                                if ('ok' in response)
+                                    window.location.href = "{% url 'driver-wf' %}";
+                            },
+
+                            error: function (response) {
+                                console.log(response)
+                            }
+                        });
+                    },
+
+                    error: function (response) {
+                        console.log(response)
+                    }
+                });
+            });
+        });
+    </script>
+{% endblock scripts %}
+        
+
+  
+  
+

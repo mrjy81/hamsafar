@@ -1,0 +1,23 @@
+{% extends '_base.html' %}
+{% load bootstrap5 %}
+{% block content %}
+    <section class=" slider_section ">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-7 ">
+                    <div class="box">
+                        <p class="text-center"><b>{{ money }}</b> اعتبار فعلی (ریال) </p>
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="form-group">
+                               {% bootstrap_form form %}
+                            </div>
+                            <button type="submit" class="btn btn-primary">پرداخت</button>
+                        </form>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock %}

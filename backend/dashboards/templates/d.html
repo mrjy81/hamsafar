@@ -1,0 +1,147 @@
+{% extends '_base.html' %}
+{% load bootstrap5 %}
+{% bootstrap_css %}
+{% bootstrap_javascript %}
+{% bootstrap_messages %}
+{% load leaflet_tags %}
+{% load jalali_tags %}
+{% load static %}
+
+{% block head %}
+    {% leaflet_js plugins="forms" %}
+    {% leaflet_css plugins="forms" %}
+    <meta name="vapid-key" content="{{ vapid_key }}">
+    {% if user.id %}
+        <meta name="user_id" content="{{ user.id }}">
+    {% endif %}
+{% endblock %}
+
+
+{% block links %}
+    <link rel="stylesheet" type="text/css" href="https://static.neshan.org/sdk/openlayers/5.3.0/ol.css">
+{% endblock links %}
+
+
+{% block alert %}
+    <div class="alert alert-warning alert-dismissible fade show" style="display:none;" role="alert">
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+{% endblock alert %}
+
+
+{% block content %}
+    <section class=" slider_section ">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-7 ">
+                    <div class="box">
+                        {{ form.media }}
+                        {% if loc.flag %}
+                            <h3>آخرین درخواست شما</h3>
+                            <input dir="ltr" type="hidden" placeholder="latitude" required id="center_lat">
+                            <input dir="ltr" type="hidden" placeholder="longitude" required id="center_lng">
+                            <div id="map"
+                                 style="width: 80vw; height: 450px; background: #eee; border: 2px solid #aaa;"></div>
+
+                            {% if loc.trip_id %}
+                                <a href="{% url 'accept-trip' loc.trip_id %}" class="btn btn-secondary btn-block">
+                                    مسیر یابی با نشان
+                                </a>
+                                <a href="{% url 'success-trip' loc.trip_id %}" class="btn btn-success btn-block">
+                                    به مقصد رسیدید
+                                </a>
+
+
+                            {% endif %}
+                            <a href="{% url 'delete-req-driver' %}" class="btn btn btn-danger">
+                                لغو درخواست
+                            </a>
+                            <div id="trips"></div>
+                        {% else %}
+                            <h1>{{ loc.message }}</h1>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock content %}
+
+
+{% block scripts %}
+    <script src="{% static 'admin/js/django_jalali.min.js' %}"></script>
+    <script src="https://cdn.polyfill.io/v2/polyfill.min.js?features=requestAnimationFrame,Element.prototype.classList,URL"></script>
+    <script type="text/javascript" src="https://static.neshan.org/sdk/openlayers/5.3.0/ol.js"></script>
+
+
+    {% if loc.flag %}
+        <script type="text/javascript">
+            var centerLat = document.getElementById("center_lat");
+            var centerLng = document.getElementById("center_lng");
+
+            //init the map
+            var myMap = new L.Map('map', {
+                key: 'web.8b9635f8452b441e9377697eb6c9f2bb',
+                maptype: 'dreamy',
+                poi: true,
+                traffic: true,
+                center: [{{loc.start_lat}}, {{loc.start_lon}}],
+                zoom: 14
+            });
+
+            //adding the marker to map
+            var marker = L.marker([{{loc.start_lat}}, {{loc.start_lon}}]).addTo(myMap);
+            var marker2 = L.marker([{{loc.finish_lat}}, {{loc.finish_lon}}]).addTo(myMap);
+            marker.bindPopup('مبدا').openPopup();
+            marker2.bindPopup('مقصد').openPopup();
+
+
+            $(document).ready(function () {
+                updateState()
+
+                function updateState() {
+                    $.ajax({
+                        url: "{% url 'driver-trip' %}",
+                        type: 'GET'
+                    })
+                        .done(response => {
+                            const data = response;
+                            console.log(data)
+                            const trip = document.getElementById('trips');
+                            let d = ""
+                            var url = window.location.origin
+                            for (let t in data) {
+                                let id = data[t]['id'];
+                                d +=
+                                    `
+              <div class="card  text-center">
+                <div class="card-header">
+                 سفر ${data[t]['distance']}  متری
+                </div>
+                <div class="card-body">
+                  <h5 class="card-title"> از ${data[t]['start_address']}</h5>
+                  <p class="card-text">تا ${data[t]['finish_address']}</p>
+                  <a href="${url}/ds/accept-trip/${id}" class="btn btn-primary">پذیرش سفر</a>
+                </div>
+              </div>
+              `
+                            }
+                            trip.innerHTML = d;
+                            setTimeout(function () {
+                                updateState()
+                            }, 10000)
+                        })
+                }
+            })
+
+        </script>
+    {% endif %}
+
+{% endblock scripts %}
+        
+
+  
+  
+
